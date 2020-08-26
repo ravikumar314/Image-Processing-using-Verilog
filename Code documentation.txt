@@ -1,0 +1,65 @@
+/************************************************************************IMAGE PROCESSING****************************************************************************/
+Summary -->
+		In this project we are doing 4 operation on an .bitmap image to enhance the quality of that image. The operations are 
+						1. Brightness		2. Contrast		3. Invert		4. Threshold
+		These operations are done on each pixel in an image matrix. In this project we are doing operation on 3 pixels at a time to increase 
+		the efficiency of our code. We are using state logic or state diagram to implement our code. The total no. of states are 4 - 
+					Idle State(Start)  -->  Vsync State  -->  Hsync State  <-->  Data State  -->  Idle State(Complete)
+Steps -->
+1. First change .bmp to .hex using Matlab
+2. Then take the RGB values of each pixel and assign that values to register memory in Verilog.
+3. The state logic describing above use it to do operation on pixels using point operation method.
+4. After applying operation store the new hex data into register memory in Verilog.
+5. The Bitmap Header 54 values (fix for windows) decided using bitmap header table and write in output file
+6. Then Change the .hex data to bitmap value.
+
+Code Documentation -->
+ In this project we are using behavioural modeling and we have 2 module with one simulation file and a operation file.
+ 1. image_read		2. image_write		3. operations 		4. simulation
+ First of all we are changing .bitmap file to .hex file using Matlab because verilog can't read .bitmap file directly. This code is written 
+ by assuming image size 768 * 512. We can change some values in our code for diferent size of image that is explained below.
+ 1. image_read -->
+	In this module we are reading and operationing on the RGB values of pixels. We will take copy the hex value in memory register in verilog using 
+	readmemh(INFILE, Memory, start_address, end_address).Then we will do operation on values taking from Reg Memory. 
+	1. Idle State -	In starting stage our current state will be Idle state and we have a start parameter which will be initially 1 and after some 
+	 delay it will be 0 till end. We are using Reset(Active low) pulse to initialise variables, it will be 0 in starting and 1 till end.For start 
+	 parameter some starting delay will be given by using Reset_d(Reset delay) signal. So in starting we are having start = 1 and when this happen 
+	 our current state become Vsync State.
+	
+	2. Vsync State - Basically this state is using in video processing. Video is made up of many images. So whenever a new image comes Vsync become = 1.
+	 But we are doing operation on one image at a time so it will be = 1 in starting. This state have a Vsync_run and a counter. In starting(when Reset = 0)
+	 Vsync_run initialise 0 and when we will in Vsync state this value become 1 and when this happen counter start counting from 1 to some Vsync_delay. 
+	 We are giving some delay between each state. So when this counter reach that delay our current state will become Hsync State.
+	
+	3. Hsync State - This is after Vsync state and become our current state when Vsync counter count till vsync delay. Hsync signal will be = 1 
+	 whenever a new line of pixels in image triggered. This state also have a run value and a counter which work same as in Vsync state till hsync_delay and 
+	 when this counter reach till that delay we will come to Data State. 
+	 
+	4. Data State - This is the state in which all the operations are done on pixels one by one. After Hsync state we come in this state. We have row and col
+   	 variable at each iteration, row and col values changes to index of pixels in image matrix. Because we are doing operation on 3 pixels at once so whenever
+	 col = img_width-3 a new line will triggered and we will come to Hsync state again same process happen till end. For ending condition we are using counter
+	 in Data state it counts from 1 to width*height/3.Once this counter reach that value operation on entire image has done and we will be on Idle state again.
+	 
+	Operation which we wil apply on image is defined in operations.v file-
+	1. Brightness-> For brightness we will add VALUE to RGB value of pixels when the value exceed 255 the RGB value will = 255 otherwise the added value for 
+	 brightness addition. Same logic we will do in brightness substraction then RGB value will = 0.
+	2. Invert -> we will calculate the average RGB value of pixel and will do a transformation ROUT = 255 - value and same value for GOUT and BOUT.
+	3. Contrast -> This operation is same as brightness operation but we will do operation on that pixels only which have RGB value > Threshold value(is defined)
+	 same logic for contrast substraction.
+	4. Threshold -> In this our image will become black and white. When our RGB average value will exceed Threshold value(is defined) the colour will 
+	 be white otherwise black.
+	 
+2. image_write -->
+	In this module we are taking the operated RGB values of pixels and converting them to .bitmap file. For .bitmap file first of all we have 
+	to write the bitmap header values in output.bmp file. These header values are fixed for windows(=54) for ios(=26) and a bitmap header table is 
+	defined to compute all 54 header values which are depending on size. After writing this value in output.bmp file all the operated values are 
+	written in this file. We will write that values in output.bmp using $fwrite() function.
+3. simulation -->
+	In this file we are taking output from image_read and send these values to image_write module. And the clk is changing #10 clk=~clk and Reset is 0 in starting 
+	#25 and after it is 1 till end. It will take input and output file from operation file.
+4. operations -->
+	In this file the name of input and output file if defined and that operation which we want to apply on image is defined. This file is included in each module. 
+	
+Result-->
+	Our code is working correctly and we are getting the correct output image after applying operations.
+	   
